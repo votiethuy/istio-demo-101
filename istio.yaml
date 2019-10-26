@@ -1,0 +1,133 @@
+global:
+  hub: docker.taservs.net/docker.io/istio
+  tag: 1.3.2
+  # proxy:
+  #   accessLogEncoding: JSON
+  #   accessLogFile: "/dev/stdout"
+
+sidecarInjectorWebhook:
+  enabled: true
+  nodeSelector:
+    axon.pool: worker
+
+galley:
+  nodeSelector:
+    axon.pool: worker
+
+citadel:
+  nodeSelector:
+    axon.pool: worker
+
+mixer:
+  nodeSelector:
+    axon.pool: worker
+
+pilot:
+  nodeSelector:
+    axon.pool: worker
+  autoscaleEnabled: true
+  autoscaleMin: 1
+  autoscaleMax: 5
+
+gateways:
+  istio-ingressgateway:
+    nodeSelector:
+      axon.pool: ingress
+    type: NodePort
+    ## Prevent cluster autoscaler scale down node
+    podAnnotations:
+      cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    # autoscaleMin: 3
+    # autoscaleMax: 25
+    autoscaleEnabled: false
+    replicaCount: 3
+    ## Because of rule 2 pod ingress run same node, we must prevent scale up gpu machine when upgrade istio-ingresss.
+    rollingMaxSurge: 25%
+    rollingMaxUnavailable: 50%
+    resources:
+      requests:
+        cpu: 2000m
+        memory: 2024Mi
+      limits:
+        cpu: 2000m
+        memory: 2024Mi
+    ## For HA, no 2 pod ingress run on same node
+    podAntiAffinityTermLabelSelector:
+      - key: app
+        operator: In
+        values: istio-ingressgateway
+        topologyKey: "kubernetes.io/hostname"
+    externalTrafficPolicy: Local
+    ports:
+      ## You can add custom gateway ports
+      # Note that AWS ELB will by default perform health checks on the first port
+      # on this list. Setting this to the health check port will ensure that health
+      # checks always work. https://github.com/istio/istio/issues/12503
+    - port: 15020
+      targetPort: 15020
+      nodePort: 30000
+      name: status-port
+    - port: 80
+      targetPort: 80
+      nodePort: 30006
+      name: http
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30001
+      name: http2
+    - port: 8443
+      targetPort: 8443
+      nodePort: 30002
+      name: https
+    - port: 9080
+      targetPort: 9080
+      nodePort: 30003
+      name: grpc-unsecure
+    - port: 9443
+      targetPort: 9443
+      nodePort: 30004
+      name: grpc-secure
+    - port: 9600
+      targetPort: 9600
+      nodePort: 30005
+      name: tcp-finagle
+
+      # This is the port where sni routing happens
+    - port: 15443
+      targetPort: 15443
+      name: tls
+
+kiali:
+  hub: docker.taservs.net/quay.io/kiali
+  tag: v1.4
+  enabled: true
+  nodeSelector:
+    axon.pool: worker
+  ingress:
+    enabled: true
+    hosts:
+      - kiali.ecom.ag1.taservs.net
+    annotations:
+      - kubernetes.io/ingress.class: nginx
+  dashboard:
+    secretName: kiali # You must create a secret with this name - one is not provided out-of-box.
+    viewOnlyMode: true # Bind the service account to a role with only read access
+    grafanaURL:  http://grafana.ecom.ag1.taservs.net:7080
+    jaegerURL: http://tracing.ecom.ag1.taservs.net:7080
+  createDemoSecret: false
+
+grafana:
+  image:
+    repository: docker.taservs.net/docker.io/grafana/grafana
+    tag: 6.1.6
+  enabled: true
+  nodeSelector:
+    axon.pool: worker
+  
+tracing:
+  enabled: true
+  ingress:
+    enabled: true
+  nodeSelector:
+    axon.pool: worker
+
