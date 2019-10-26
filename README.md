@@ -91,24 +91,38 @@ kubectl get svc istio-ingressgateway -n istio-system
 GATEWAY_URL=$INGRESS_HOST:30006
 ```
 
+->open browser to view
+
+```code
+open http://$GATEWAY_URL/productpage
+```
+
 ```bash
 kubectl apply -f samples/bookinfo/networking/destination-rule-all-mtls.yaml
 ```
+
+Route Review V1: no star
 
 ```bash
 kubectl apply -f samples/bookinfo/networking/virtual-service-all-v1.yaml
 ```
 
+Route Review V2 for user jason
+
 ```bash
 kubectl apply -f samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
 ```
 
--> Login as user jason to see different
-
-Shifting 50% to V3
+Shifting 50% to V3. -> Refresh multi times to see different star/ no star
 
 ```bash
 kubectl apply -f samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
 ```
 
--> Refresh multi times to see different star/ no star
+Clean up
+
+```code
+kubectl delete -f samples/bookinfo/networking/virtual-service-all-v1.yaml
+kubectl delete -f samples/bookinfo/networking/bookinfo-gateway.yaml
+kubectl delete -f samples/bookinfo/platform/kube/bookinfo.yaml
+```
